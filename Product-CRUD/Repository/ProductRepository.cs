@@ -1,5 +1,4 @@
-﻿using System;
-using ProductCRUD.Model;
+﻿using ProductCRUD.Model;
 
 namespace ProductCRUD.Repository
 {
@@ -10,5 +9,12 @@ namespace ProductCRUD.Repository
         public Product? FindById(string id);
         public List<Product> FindByNameLike(string name);
     }
-}
 
+    public interface IProductFileRepository : IProductRepository
+    {
+    }
+
+    public interface IProductArrayRepository : IProductRepository
+    {
+    }
+}

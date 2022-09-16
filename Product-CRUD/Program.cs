@@ -1,12 +1,8 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using ProductCRUD.Model;
-using ProductCRUD.Repository;
-using ProductCRUD.UseCase;
-using ProductCRUD.Utils;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using ProductCRUD;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
+using ProductCRUD.Model;
+using ProductCRUD.Utils;
 
 namespace ProductCrud;
 
@@ -38,7 +34,8 @@ public class Program
 
         // How to read configuration from appsettings.json
         // Way 1. Read from singleton
-        var appName = startup.Provider.GetRequiredService<IConfiguration>().GetSection("App").GetSection("AppName").Value;
+        var appName = startup.Provider.GetRequiredService<IConfiguration>().GetSection("App").GetSection("AppName")
+            .Value;
         Console.WriteLine($"Run: {appName}");
 
         // Way 2. IOptions (use constructor injection)
@@ -53,25 +50,28 @@ public class Program
         var fileDir = startup.Provider.GetRequiredService<AppSettings>().FileDirectory;
         Console.WriteLine($"File Directory: {fileDir}");
 
-        var productUseCase = startup.Provider.GetRequiredService<ProductRegistrationUseCase>();
-        productUseCase.Handle(new Product("1", "Nasi Goreng"));
-        productUseCase.Handle(new Product("2", "Es teh tawar"));
+        var productUseCase = startup.Provider.GetRequiredService<ProductRegistrationResolver>()(RepoType.ARRAY);
+        productUseCase.Handle(new Product("5", "Somai"));
+        productUseCase.Handle(new Product("6", "Es kelapa muda"));
 
-        var findProductUseCase = startup.Provider.GetRequiredService<FindProductUseCase>();
+        // Check the singleton dependency
+        // productUseCase = startup.Provider.GetRequiredService<ProductRegistrationResolver>()(RepoType.ARRAY);
+        // productUseCase.Handle(new Product("1", "Nasi goreng"));
+        // productUseCase.Handle(new Product("2", "Es teh manis"));
+
+        var findProductUseCase = startup.Provider.GetRequiredService<FindProductResolver>()(RepoType.ARRAY);
         var products = findProductUseCase.Handle(ProductFindType.All);
         foreach (var p in products)
         {
             Console.WriteLine(p.ToString());
         }
 
-        var productResId = findProductUseCase.Handle(ProductFindType.ById, "2");
+        var productResId = findProductUseCase.Handle(ProductFindType.ById, "6");
         foreach (var p in productResId)
         {
             Console.WriteLine(p.ToString());
         }
-
     }
 
     //public static IHostBuilder CreateHostBuilder(string[] args) => Host.CreateDefaultBuilder(args).ConfigureServices((_, services) => new Startup().ConfigureServices(services));
-
 }

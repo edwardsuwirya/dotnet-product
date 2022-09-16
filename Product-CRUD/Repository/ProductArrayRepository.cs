@@ -1,9 +1,8 @@
-﻿using System;
-using ProductCRUD.Model;
+﻿using ProductCRUD.Model;
 
 namespace ProductCRUD.Repository
 {
-    public class ProductArrayRepository : IProductRepository
+    public class ProductArrayRepository : IProductArrayRepository
     {
         private readonly List<Product> _products = new List<Product>();
 
