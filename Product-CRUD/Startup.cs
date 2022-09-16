@@ -59,6 +59,11 @@ namespace ProductCRUD
                     var appSettings = provider.GetRequiredService<AppSettings>();
                     var filePath = appSettings.FileDirectory + appSettings.FileName;
                     return new ProductFileRepository(filePath);
+                }).AddTransient<IProductDbRepository>((provider) =>
+                {
+                    var config = provider.GetRequiredService<IConfiguration>();
+                    var connString = config.GetConnectionString("DefaultConnection");
+                    return new ProductDbRepository(connString);
                 })
                 .AddTransient<ProductRegistrationResolver>(provider => key =>
                     {
@@ -70,6 +75,9 @@ namespace ProductCRUD
                             case RepoType.FILE:
                                 return new ProductRegistrationUseCase(
                                     provider.GetRequiredService<IProductFileRepository>());
+                            case RepoType.DB:
+                                return new ProductRegistrationUseCase(
+                                    provider.GetRequiredService<IProductDbRepository>());
                             default: throw new Exception("Key not found");
                         }
                     }
@@ -82,10 +90,13 @@ namespace ProductCRUD
                                 return new FindProductUseCase(provider.GetRequiredService<IProductArrayRepository>());
                             case RepoType.FILE:
                                 return new FindProductUseCase(provider.GetRequiredService<IProductFileRepository>());
+                            case RepoType.DB:
+                                return new FindProductUseCase(provider.GetRequiredService<IProductDbRepository>());
                             default: throw new Exception("Key not found");
                         }
                     }
-                );
+                ).AddTransient<BulkProductRegistrationUseCase>(provider =>
+                    new BulkProductRegistrationUseCase(provider.GetRequiredService<IProductDbRepository>()));
             return services.BuildServiceProvider();
         }
     }

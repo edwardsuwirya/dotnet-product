@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using ProductCRUD;
 using ProductCRUD.Model;
+using ProductCRUD.UseCase;
 using ProductCRUD.Utils;
 
 namespace ProductCrud;
@@ -50,16 +51,24 @@ public class Program
         var fileDir = startup.Provider.GetRequiredService<AppSettings>().FileDirectory;
         Console.WriteLine($"File Directory: {fileDir}");
 
-        var productUseCase = startup.Provider.GetRequiredService<ProductRegistrationResolver>()(RepoType.ARRAY);
-        productUseCase.Handle(new Product("5", "Somai"));
-        productUseCase.Handle(new Product("6", "Es kelapa muda"));
+        // var productUseCase = startup.Provider.GetRequiredService<ProductRegistrationResolver>()(RepoType.DB);
+        // productUseCase.Handle(new Product("10", "Somai"));
+        // productUseCase.Handle(new Product("11", "Es kelapa muda"));
 
         // Check the singleton dependency
         // productUseCase = startup.Provider.GetRequiredService<ProductRegistrationResolver>()(RepoType.ARRAY);
         // productUseCase.Handle(new Product("1", "Nasi goreng"));
         // productUseCase.Handle(new Product("2", "Es teh manis"));
 
-        var findProductUseCase = startup.Provider.GetRequiredService<FindProductResolver>()(RepoType.ARRAY);
+        var bulkProductRegistration = startup.Provider.GetRequiredService<BulkProductRegistrationUseCase>();
+        bulkProductRegistration.Handle(new List<Product>()
+        {
+            new Product("14", "Juice semangka"),
+            // Should be rollback, because length of id is too long
+            // new Product("111-222-333-444", "Juice alpukat"),
+            new Product("15", "Juice strawberry")
+        });
+        var findProductUseCase = startup.Provider.GetRequiredService<FindProductResolver>()(RepoType.DB);
         var products = findProductUseCase.Handle(ProductFindType.All);
         foreach (var p in products)
         {

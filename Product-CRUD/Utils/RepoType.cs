@@ -5,6 +5,7 @@ namespace ProductCRUD.Utils
     public enum RepoType
     {
         ARRAY,
-        FILE
+        FILE,
+        DB
     }
 }

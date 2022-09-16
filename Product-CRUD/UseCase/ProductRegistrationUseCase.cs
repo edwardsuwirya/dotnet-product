@@ -1,5 +1,4 @@
-﻿using System;
-using ProductCRUD.Model;
+﻿using ProductCRUD.Model;
 using ProductCRUD.Repository;
 
 namespace ProductCRUD.UseCase

@@ -72,6 +72,11 @@ namespace ProductCRUD.Repository
             }
             return productRes;
         }
+
+        public void AddBulk(List<Product> newProducts)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
 
