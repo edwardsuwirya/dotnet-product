@@ -1,31 +1,27 @@
-﻿using Npgsql;
+﻿using System.Data;
+using Dapper;
+using Product_CRUD;
 using ProductCRUD.Model;
 
 namespace ProductCRUD.Repository
 {
     public class ProductDbRepository : BaseDbRepository, IProductDbRepository
     {
-        public ProductDbRepository(string connString)
-        {
-            GetConnection(connString);
-        }
+        public ProductDbRepository(DapperContext context) => GetConnection(context);
 
         public List<Product> GetAll()
         {
             var products = new List<Product>();
             try
             {
-                QuerySql("SELECT * from m_product", null, (NpgsqlDataReader rdr) =>
+                WithConn((con) =>
                 {
-                    while (rdr.Read())
-                    {
-                        products.Add(new Product(rdr.GetString(0), rdr.GetString(1)));
-                    }
-                }).Wait();
+                    var results = con.Query<Product>("SELECT id, product_name as productName from m_product");
+                    products = results.ToList();
+                });
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
                 throw new Exception("Failed Get All Data");
             }
 
@@ -36,8 +32,13 @@ namespace ProductCRUD.Repository
         {
             try
             {
-                ExecSql("INSERT INTO m_product VALUES($1, $2)", new List<string> { product.id, product.productName })
-                    .Wait();
+                WithConn((con) =>
+                {
+                    var parameters = new DynamicParameters();
+                    parameters.Add("id", product.id, DbType.String);
+                    parameters.Add("name", product.productName, DbType.String);
+                    con.Execute("INSERT INTO m_product VALUES(@id, @name)", parameters);
+                });
             }
             catch (Exception e)
             {
@@ -50,19 +51,21 @@ namespace ProductCRUD.Repository
         {
             try
             {
-                var products = new List<Product>();
-                QuerySql("SELECT * from m_product where id=$1", new List<string> { id }, (NpgsqlDataReader rdr) =>
+                Product? product = null;
+                WithConn((con) =>
                 {
-                    while (rdr.Read())
-                    {
-                        products.Add(new Product(rdr.GetString(0), rdr.GetString(1)));
-                    }
-                }).Wait();
-                return products.Count == 0 ? null : products[0];
+                    var parameters = new DynamicParameters();
+                    parameters.Add("id", id, DbType.String);
+                    var results =
+                        con.QuerySingleOrDefault<Product>(
+                            "SELECT id,product_name as productName from m_product where id=@id",
+                            parameters);
+                    product = results;
+                });
+                return product;
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
                 throw new Exception("Failed Find Data");
             }
         }
@@ -72,19 +75,19 @@ namespace ProductCRUD.Repository
             try
             {
                 var products = new List<Product>();
-                QuerySql("SELECT * from m_product where name like $1", new List<string> { name },
-                    (NpgsqlDataReader rdr) =>
-                    {
-                        while (rdr.Read())
-                        {
-                            products.Add(new Product(rdr.GetString(0), rdr.GetString(1)));
-                        }
-                    }).Wait();
+                WithConn(con =>
+                {
+                    var parameters = new DynamicParameters();
+                    parameters.Add("name", $"%{name}%", DbType.String);
+                    var results =
+                        con.Query<Product>("SELECT id,product_name as productName from m_product where name like @name",
+                            parameters);
+                    products = results.ToList();
+                });
                 return products;
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
                 throw new Exception("Failed Find Data");
             }
         }
@@ -93,21 +96,21 @@ namespace ProductCRUD.Repository
         {
             try
             {
-                var batchCommands = new List<NpgsqlBatchCommand>();
-                foreach (var product in newProducts)
+                WithTrx((con, trx) =>
                 {
-                    var command = new NpgsqlBatchCommand("INSERT INTO m_product VALUES($1, $2)");
-                    command.Parameters.AddWithValue(product.id);
-                    command.Parameters.AddWithValue(product.productName);
-                    batchCommands.Add(command);
-                }
-
-                ExecBatchInsertSql(batchCommands);
+                    foreach (var product in newProducts)
+                    {
+                        var parameters = new DynamicParameters();
+                        parameters.Add("id", product.id, DbType.String);
+                        parameters.Add("name", product.productName, DbType.String);
+                        con.Execute("INSERT INTO m_product VALUES(@id, @name)", parameters,
+                            transaction: trx);
+                    }
+                });
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
-                throw new Exception("Failed Add Data");
+                throw new Exception("Failed Insert Bulk Data");
             }
         }
     }

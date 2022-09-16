@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Product_CRUD;
 using ProductCRUD.Repository;
 using ProductCRUD.UseCase;
 using ProductCRUD.Utils;
@@ -46,6 +47,12 @@ namespace ProductCRUD
             services
                 .Configure<AppSettings>(_configuration.GetSection("App")) // For using IOptions
                 .AddSingleton<IConfiguration>(_configuration)
+                .AddSingleton<DapperContext>(provider =>
+                {
+                    var config = provider.GetRequiredService<IConfiguration>();
+                    var connString = config.GetConnectionString("DefaultConnection");
+                    return new DapperContext(connString);
+                })
                 .AddSingleton<AppSettings>((provider) => // For using Binding
                 {
                     var appSettings = new AppSettings();
@@ -59,12 +66,8 @@ namespace ProductCRUD
                     var appSettings = provider.GetRequiredService<AppSettings>();
                     var filePath = appSettings.FileDirectory + appSettings.FileName;
                     return new ProductFileRepository(filePath);
-                }).AddTransient<IProductDbRepository>((provider) =>
-                {
-                    var config = provider.GetRequiredService<IConfiguration>();
-                    var connString = config.GetConnectionString("DefaultConnection");
-                    return new ProductDbRepository(connString);
                 })
+                .AddTransient<IProductDbRepository, ProductDbRepository>()
                 .AddTransient<ProductRegistrationResolver>(provider => key =>
                     {
                         switch (key)

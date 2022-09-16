@@ -1,108 +1,62 @@
-using Npgsql;
+using System.Data;
+using Product_CRUD;
 
 namespace ProductCRUD.Repository;
 
 public abstract class BaseDbRepository
 {
-    private NpgsqlConnection? _con = null;
+    private IDbConnection? _con = null;
 
-    private Task WithConn(Func<NpgsqlConnection, Task> actionSql)
+    protected void WithConn(Action<IDbConnection> actionSql)
     {
-        if (_con is not null)
+        try
         {
-            return actionSql(_con);
+            if (_con is null)
+            {
+                throw new Exception("Connection is null");
+            }
+
+            actionSql(_con);
         }
-        else
+        catch (Exception e)
         {
-            throw new Exception("Connection is null");
-        }
-    }
-
-    protected void GetConnection(string connectionString)
-    {
-        _con = new NpgsqlConnection(connectionString);
-    }
-
-    private void GenerateParameters(NpgsqlCommand cmd, List<string>? parameters)
-    {
-        if (parameters == null || parameters.Count == 0) return;
-        foreach (var p in parameters)
-        {
-            cmd.Parameters.AddWithValue(p);
+            Console.WriteLine(e);
+            throw;
         }
     }
 
-    protected Task QuerySql(string sql, List<string>? parameters, Action<NpgsqlDataReader> reader)
+    protected void WithTrx(Action<IDbConnection, IDbTransaction> actionSql)
     {
-        return WithConn((con) => Task.Run(async () =>
+        try
         {
+            if (_con is null)
+            {
+                throw new Exception("Connection is null");
+            }
+
+            _con.Open();
+            using var transaction = _con.BeginTransaction();
             try
             {
-                await con.OpenAsync();
-                await using var cmd = new NpgsqlCommand(sql, con);
-                GenerateParameters(cmd, parameters);
-                await using var rdr = await cmd.ExecuteReaderAsync();
-                reader(rdr);
+                actionSql(_con, transaction);
+                transaction.Commit();
             }
-            catch (NpgsqlException e)
+            catch (Exception e)
             {
                 Console.WriteLine(e);
+                transaction.Rollback();
                 throw;
             }
-            finally
-            {
-                await con.CloseAsync();
-            }
-        }));
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
     }
 
-    protected Task ExecSql(string sql, List<string> parameters)
+    protected void GetConnection(DapperContext context)
     {
-        return WithConn((con) => Task.Run(async () =>
-        {
-            try
-            {
-                await con.OpenAsync();
-                await using var cmd = new NpgsqlCommand(sql, con);
-                GenerateParameters(cmd, parameters);
-                await cmd.ExecuteNonQueryAsync();
-            }
-            catch (NpgsqlException e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
-            finally
-            {
-                await con.CloseAsync();
-            }
-        }));
-    }
-
-    protected Task ExecBatchInsertSql(List<NpgsqlBatchCommand> commands)
-    {
-        return WithConn((con) => Task.Run(async () =>
-        {
-            await con.OpenAsync();
-            try
-            {
-                await using var batch = new NpgsqlBatch(con);
-                foreach (var bc in commands)
-                {
-                    batch.BatchCommands.Add(bc);
-                }
-
-                await batch.ExecuteNonQueryAsync();
-            }
-            catch (NpgsqlException e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
-            finally
-            {
-                await con.CloseAsync();
-            }
-        }));
+        _con = context.CreateConnection();
     }
 }
