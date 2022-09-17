@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Product_CRUD;
+using ProductCRUD.Model;
 using ProductCRUD.Repository;
 using ProductCRUD.UseCase;
 using ProductCRUD.Utils;
@@ -53,18 +55,17 @@ namespace ProductCRUD
                     config.Bind("App", appSettings);
                     return appSettings;
                 })
+                .AddDbContext<ProductContext>()
                 .AddSingleton<IProductArrayRepository>(_ => new ProductArrayRepository())
                 .AddTransient<IProductFileRepository>((provider) =>
                 {
                     var appSettings = provider.GetRequiredService<AppSettings>();
                     var filePath = appSettings.FileDirectory + appSettings.FileName;
                     return new ProductFileRepository(filePath);
-                }).AddTransient<IProductDbRepository>((provider) =>
-                {
-                    var config = provider.GetRequiredService<IConfiguration>();
-                    var connString = config.GetConnectionString("DefaultConnection");
-                    return new ProductDbRepository(connString);
                 })
+                .AddTransient<IProductDbRepository, ProductDbRepository>()
+                .AddTransient<IProductCategoryRepository, ProductCategoryRepository>()
+                .AddTransient<FindProductCategoryUseCase>()
                 .AddTransient<ProductRegistrationResolver>(provider => key =>
                     {
                         switch (key)

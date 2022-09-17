@@ -60,14 +60,29 @@ public class Program
         // productUseCase.Handle(new Product("1", "Nasi goreng"));
         // productUseCase.Handle(new Product("2", "Es teh manis"));
 
-        var bulkProductRegistration = startup.Provider.GetRequiredService<BulkProductRegistrationUseCase>();
-        bulkProductRegistration.Handle(new List<Product>()
+        // var bulkProductRegistration = startup.Provider.GetRequiredService<BulkProductRegistrationUseCase>();
+        // bulkProductRegistration.Handle(new List<Product>()
+        // {
+        //     new Product("14", "Juice semangka"),
+        //     // Should be rollback, because length of id is too long
+        //     // new Product("111-222-333-444", "Juice alpukat"),
+        //     new Product("15", "Juice strawberry")
+        // });
+        Console.WriteLine("List Product Category");
+        Console.WriteLine("=========================");
+        var findProductCategoryUseCase = startup.Provider.GetRequiredService<FindProductCategoryUseCase>();
+        var productCategories = findProductCategoryUseCase.Handle();
+        foreach (var pc in productCategories)
         {
-            new Product("14", "Juice semangka"),
-            // Should be rollback, because length of id is too long
-            // new Product("111-222-333-444", "Juice alpukat"),
-            new Product("15", "Juice strawberry")
-        });
+            Console.WriteLine(pc.ToString());
+            foreach (var p in pc.Products)
+            {
+                Console.WriteLine($"  {p.id}-{p.productName}");
+            }
+        }
+        Console.WriteLine("");
+        Console.WriteLine("List Product");
+        Console.WriteLine("=========================");
         var findProductUseCase = startup.Provider.GetRequiredService<FindProductResolver>()(RepoType.DB);
         var products = findProductUseCase.Handle(ProductFindType.All);
         foreach (var p in products)
@@ -75,7 +90,7 @@ public class Program
             Console.WriteLine(p.ToString());
         }
 
-        var productResId = findProductUseCase.Handle(ProductFindType.ById, "6");
+        var productResId = findProductUseCase.Handle(ProductFindType.ById, "1");
         foreach (var p in productResId)
         {
             Console.WriteLine(p.ToString());
